@@ -6,4 +6,4 @@ module readEx
     workbook = excel.Workbooks.Open('C:\Users\Jmtran1216\Documents\GitHub\Project-Skyplot\pyxis star coords.xlsx')
     worksheet = workbook.Worksheets(1) #Positioning to the first sheet of the workbook
     data = worksheet.Range('a3:l3')['Value']
-    
+end
