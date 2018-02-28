@@ -8,7 +8,7 @@ module Examples
   module CustomTool
 
     unless file_loaded?(__FILE__)
-      ex = SketchupExtension.new('Custom Tool', 'ex_custom_tool/main')
+      ex = SketchupExtension.new('HTML Dialog View Test', 'view/main')
       ex.description = 'SketchUp Ruby API example creating a custom tool.'
       ex.version     = '1.0.0'
       ex.copyright   = 'Trimble Navigations © 2016'
