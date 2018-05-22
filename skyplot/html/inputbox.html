@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link href="../vendor/bootstrap/css/bootstrap.css" rel="stylesheet">
+    <script src="../vendor/jquery.js"></script>
+    <script src="../vendor/popper.js"></script>
+    <script src="../vendor/bootstrap/js/bootstrap.js"></script>
+    <script src="../vendor/vue.js"></script>
+    <script src="../vendor/xlsx.full.min.js"></script>
+    <style>
+        /* Applying a global zoom to scale down the default size of Bootstrap. */
+        
+        html {
+            zoom: 0.8;
+        }
+        /* Bootstrap cause a scrollbar for some reason when it should not. */
+        
+        body {
+            overflow: hidden;
+        }
+        /* Position a footer at the bottom of the dialog. */
+        
+        .footer {
+            position: fixed;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            text-align: right;
+            background: #fff;
+            border-top: 1px solid #ccc;
+            padding: 1em;
+            margin: 0;
+        }
+        /* Give the buttons some even width. */
+        
+        .footer button {
+            min-width: 6em;
+        }
+        
+        .inputfile {
+            margin: 2em 4em 1em 4em;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="app" v-on:keyup.enter="accept" v-on:keyup.esc="cancel" class="container-fluid">
+        <form class="form-horizontal">
+            <div class="form-group row">
+                <div class="col-sm-3"></div>
+                <div class="col-sm-3"><input type="file" name="file" id="files" class="inputfile" /></div>
+                <div class="col-sm-3"></div>
+            </div>
+            <hr>
+            <h4>Or, input Right Ascension, Declination, and Lightyears directly.</h4>
+            <div class="form-group row" v-for="(input, index) in options.inputs">
+                <label class="col-sm-3 control-label">{{ input.label }}: </label>
+                <div class="col-sm-9">
+                    <template v-if="input.options.length > 0">
+            <select class="form-control" v-model="input.value" v-bind:autofocus.once="index == 0" v-bind:size.once="input.type == 'listbox' ? 5 : null">
+              <option v-for="option in input.options">{{ option }}</option>
+            </select>
+          </template>
+                    <template v-else>
+            <input class="form-control" v-model="input.value" v-bind:autofocus.once="index == 0" onfocus="this.select()">
+          </template>
+                </div>
+            </div>
+        </form>
+        <p class="footer">
+            <button class="btn btn-secondary " v-on:click="cancel">
+        {{ options.cancel_button }}
+      </button>
+            <button class="btn btn-primary" v-on:click="accept">
+        {{ options.accept_button }}
+      </button>
+        </p>
+    </div>
+
+    <script>
+        const KEY_RETURN = 13;
+        const KEY_ESC = 27;
+        var results = [];
+
+        let app = new Vue({
+            el: '#app',
+            data: {
+                options: {
+                    title: 'Untitled',
+                    inputs: [],
+                },
+            },
+            methods: {
+                accept() {
+                    let values = this.options.inputs.map((input) => {
+                        return input.value;
+                    });
+                    if (results === undefined || results.length == 0) {
+                        console.log('array does not exist');
+                    } else {
+                        values = results;
+                    }
+                    sketchup.accept(values);
+                },
+                cancel() {
+                    sketchup.cancel();
+                },
+                global_keyup(event) {
+                    switch (event.keyCode) {
+                        case KEY_ESC:
+                            this.cancel();
+                            break;
+                        case KEY_RETURN:
+                            // This will need adjustments if a <textarea> field is desired.
+                            this.accept();
+                            break;
+                    }
+                }
+            },
+            mounted: function() {
+                // Capture global key events.
+                window.addEventListener('keyup', (event) => {
+                    this.global_keyup(event);
+                });
+                // Signal the Ruby side that the dialog is ready to be interacted with.
+                sketchup.ready();
+            }
+        });
+
+        document.getElementById('files').addEventListener('change', printData, false);
+
+        function printData(e) {
+            var file = e.target.files[0];
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var data = e.target.result;
+                var workbook = XLSX.read(data, {
+                    type: 'binary'
+                });
+
+                workbook.SheetNames.forEach(function(sheetName) {
+                    var XL_row_object = XLSX.utils.sheet_to_row_object_array(workbook.Sheets[sheetName]);
+                    var json_object = JSON.stringify(XL_row_object)
+                    var jsonTest = JSON.parse(json_object);
+                    for (var i = 0; i < jsonTest.length; i++) {
+                        results.push(jsonTest[i]['RA deg']);
+                        results.push(jsonTest[i]['Dec deg_1']);
+                        results.push(jsonTest[i]['Dist.(ly)']);
+                    }
+                })
+            };
+
+            reader.readAsBinaryString(file);
+        }
+    </script>
+
+</body>
+
+</html>
